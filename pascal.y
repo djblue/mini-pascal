@@ -206,18 +206,23 @@ statement_part:
 
 compound_statement:
   BEGIN statement_sequence END {
+    console.log(JSON.stringify($2, null, 2));
   }
 ;
 
 statement_sequence:
   statement {
+    $$ = [$1];
   }
 | statement_sequence SEMICOLON statement {
+    $1.push($3);
+    $$ = $1;
   }
 ;
 
 statement:
   assignment_statement {
+    $$ = $1;
   }
 | compound_statement {
   }
@@ -241,6 +246,8 @@ if_statement:
 
 assignment_statement:
   variable_access ASSIGNMENT expression {
+    $$ = {};
+    $$[$1] = $3;
   }
 | variable_access ASSIGNMENT object_instantiation {
   }
@@ -324,6 +331,7 @@ boolean_expression:
 
 expression:
   simple_expression {
+    $$ = $1;
   }
 | simple_expression relop simple_expression {
   }
@@ -331,8 +339,14 @@ expression:
 
 simple_expression:
   term {
+    $$ = $1;
   }
 | simple_expression addop term {
+    $$ = {
+      left: $1,
+      op: $2,
+      right: $3
+    };
   }
 ;
 
@@ -340,6 +354,11 @@ term:
   factor {
   }
 | term mulop factor {
+    $$ = {
+      left: $1,
+      op: $2,
+      right: $3
+    };
   }
 ;
 
