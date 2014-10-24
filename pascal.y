@@ -1,5 +1,6 @@
 %{
   var inspect = require('util').inspect
+    , _ = require('underscore');
     , blocks = []
     , count = 0;
 %}
@@ -238,6 +239,7 @@ statement_sequence:
 statement:
   assignment_statement {
     $1.type = 'assign';
+    blocks.push($1);
   }
 | compound_statement {
     $1.type = 'compound';
@@ -414,13 +416,13 @@ term:
   }
 | term mulop factor {
     var t = 't'+ count++;
-    var merge = t + ' = ' + $1.end + ' ' + $2 + ' ' + $3;
+    var merge = t + ' = ' + $1.end + ' ' + $2 + ' ' + ($3.end || $3);
     $$ = {
       start: $1.start || $3.start || t,
       end: t,
-      block: $1.block.concat(merge)
+      block: _.flatten($1.block.concat($3.block).concat(merge))
     };
-    //console.log('term: ' + JSON.stringify($$, null, 2));
+    /* console.log('term: ' + JSON.stringify($$, null, 2)); */
   }
 ;
 
