@@ -5,6 +5,7 @@
 To get going, make sure you have node.js installed. Then do:
 
     npm install -g jison
+    npm install
 
 to get the parser generator. Then run:
 
