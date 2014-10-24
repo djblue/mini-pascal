@@ -1,6 +1,6 @@
 %{
   var inspect = require('util').inspect
-    , _ = require('underscore');
+    , _ = require('underscore')
     , blocks = []
     , count = 0;
 %}
@@ -420,7 +420,7 @@ term:
     $$ = {
       start: $1.start || $3.start || t,
       end: t,
-      block: _.flatten($1.block.concat($3.block).concat(merge))
+      block: _.compact($1.block.concat($3.block).concat(merge))
     };
     /* console.log('term: ' + JSON.stringify($$, null, 2)); */
   }
