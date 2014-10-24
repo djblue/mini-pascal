@@ -2,7 +2,28 @@
   var inspect = require('util').inspect
     , _ = require('underscore')
     , blocks = []
+    , cfgs = []
     , count = 0;
+
+    // go through every block and print out
+    // all uniq left hand side values
+    var printVars = function() {
+      var combined = _.chain(blocks)
+        .pluck('block')
+        .flatten()
+        .map(function(block) {
+          return block.split(' ')[0];
+        })
+        .uniq()
+        .sort()
+        .value()
+
+      console.log('Vars (output 1)');
+      combined.forEach(function(varName) {
+        console.log(varName);
+      });
+      console.log();
+    };
 %}
 
 %lex
@@ -67,6 +88,7 @@
 program:
   program_heading SEMICOLON class_list DOT {
     console.log(JSON.stringify(blocks, null, 2));
+    printVars();
   }
 ;
 
@@ -225,10 +247,13 @@ statement_sequence:
   }
 | statement_sequence SEMICOLON statement {
     var last = $1[$1.length - 1];
+    /* TODO: This needs to merge based on assignment-assigment, */
+    /* assignment-while, assignemnt-if i think */
     // merge two adjacent assignment statements
     if (last.type == 'assign' && $3.type == 'assign') {
-      last.end = $3.end;
-      last.block = last.block.concat($3.block);
+      /* commenting out for now */
+      /* last.end = $3.end; */
+      /* last.block = last.block.concat($3.block); */
     }
     else if (typeof $3 != 'string') {
       $1.push($3);
@@ -239,7 +264,6 @@ statement_sequence:
 statement:
   assignment_statement {
     $1.type = 'assign';
-    blocks.push($1);
   }
 | compound_statement {
     $1.type = 'compound';
@@ -269,7 +293,7 @@ while_statement:
 if_statement:
   IF boolean_expression THEN statement ELSE statement {
     $2.type = 'if';
-    blocks.push($2)
+    blocks.push($2);
     if ($4.type == 'compound') {
       $4.forEach(function (t) {
         blocks.push(t)
@@ -284,6 +308,8 @@ if_statement:
     } else {
       blocks.push($6)
     }
+
+    /* console.log(JSON.stringify($2, null, 2)); */
   }
 ;
 
@@ -292,6 +318,7 @@ assignment_statement:
     $3.block.push($1 + ' = ' + $3.end);
     $3.end = $1;
     $$ = $3;
+    blocks.push($3);
     //console.log(JSON.stringify($$, null, 2));
   }
 | variable_access ASSIGNMENT object_instantiation {
