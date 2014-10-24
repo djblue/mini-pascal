@@ -1,3 +1,9 @@
+%{
+  var inspect = require('util').inspect
+    , blocks = []
+    , count = 0;
+%}
+
 %lex
 
 %options flex case-insensitive
@@ -53,12 +59,13 @@
 
 /lex
 
-%start program
+%end program
 
 %% /* language grammar */
 
 program:
   program_heading SEMICOLON class_list DOT {
+    console.log(JSON.stringify(blocks, null, 2));
   }
 ;
 
@@ -196,6 +203,7 @@ function_identification:
 
 function_block:
   variable_declaration_part statement_part {
+    //console.log(JSON.stringify($2, null, 2));
   }
 ;
 
@@ -206,7 +214,7 @@ statement_part:
 
 compound_statement:
   BEGIN statement_sequence END {
-    console.log(JSON.stringify($2, null, 2));
+    $$ = $2;
   }
 ;
 
@@ -215,16 +223,24 @@ statement_sequence:
     $$ = [$1];
   }
 | statement_sequence SEMICOLON statement {
-    $1.push($3);
-    $$ = $1;
+    var last = $1[$1.length - 1];
+    // merge two adjacent assignment statements
+    if (last.type == 'assign' && $3.type == 'assign') {
+      last.end = $3.end;
+      last.block = last.block.concat($3.block);
+    }
+    else if (typeof $3 != 'string') {
+      $1.push($3);
+    }
   }
 ;
 
 statement:
   assignment_statement {
-    $$ = $1;
+    $1.type = 'assign';
   }
 | compound_statement {
+    $1.type = 'compound';
   }
 | if_statement {
   }
@@ -236,18 +252,45 @@ statement:
 
 while_statement:
   WHILE boolean_expression DO statement {
+    $2.type = 'while';
+    blocks.push($2);
+    if ($4.type == 'compound') {
+      $4.forEach(function (t) {
+        blocks.push(t)
+      })
+    } else {
+      blocks.push($4)
+    }
   }
 ;
 
 if_statement:
   IF boolean_expression THEN statement ELSE statement {
+    $2.type = 'if';
+    blocks.push($2)
+    if ($4.type == 'compound') {
+      $4.forEach(function (t) {
+        blocks.push(t)
+      })
+    } else {
+      blocks.push($4)
+    }
+    if ($6.type == 'compound') {
+      $6.forEach(function (t) {
+        blocks.push(t)
+      })
+    } else {
+      blocks.push($6)
+    }
   }
 ;
 
 assignment_statement:
   variable_access ASSIGNMENT expression {
-    $$ = {};
-    $$[$1] = $3;
+    $3.block.push($1 + ' = ' + $3.end);
+    $3.end = $1;
+    $$ = $3;
+    //console.log(JSON.stringify($$, null, 2));
   }
 | variable_access ASSIGNMENT object_instantiation {
   }
@@ -331,34 +374,53 @@ boolean_expression:
 
 expression:
   simple_expression {
-    $$ = $1;
   }
 | simple_expression relop simple_expression {
+    var t = 't'+ count++;
+    var merge = t + ' = ' + $1.end + ' ' + $2 + ' ' +  $3.end;
+    $$ = {
+      start: $1.start || $3.start || t,
+      end: t,
+      block: $1.block.concat($3.block).concat(merge)
+    };
+    //console.log('e: ' + JSON.stringify($$, null, 2));
   }
 ;
 
 simple_expression:
   term {
-    $$ = $1;
   }
 | simple_expression addop term {
+    var t = 't'+ count++;
+    var merge = t + ' = ' + $1.end + ' ' + $2 + ' ' + $3.end;
     $$ = {
-      left: $1,
-      op: $2,
-      right: $3
+      start: $1.start || $3.start || t,
+      end: t,
+      block: $1.block.concat($3.block).concat(merge)
     };
+    //console.log('se: ' + JSON.stringify($$, null, 2));
   }
 ;
 
 term:
   factor {
+    // check if factory was a primary of just a factor
+    if (typeof $1 == 'string') {
+      $$ = {
+        end: $1,
+        block: []
+      };
+    }
   }
 | term mulop factor {
+    var t = 't'+ count++;
+    var merge = t + ' = ' + $1.end + ' ' + $2 + ' ' + $3;
     $$ = {
-      left: $1,
-      op: $2,
-      right: $3
+      start: $1.start || $3.start || t,
+      end: t,
+      block: $1.block.concat(merge)
     };
+    //console.log('term: ' + JSON.stringify($$, null, 2));
   }
 ;
 
@@ -371,6 +433,20 @@ sign:
 
 factor:
   sign factor {
+    var t = 't'+ count++;
+    if (typeof $2 == 'string') {
+      $$ = {
+        start: t,
+        end: t,
+        block: [t + ' = ' + 0 + ' - ' + $2]
+      };
+    } else {
+      $$ = {
+        start: $2.start || t,
+        end: t,
+        block: $2.block.concat([t + ' = ' + 0 + ' - ' + $2.end])
+      };
+    }
   }
 | primary {
   }
@@ -384,6 +460,7 @@ primary:
 | function_designator {
   }
 | LPAREN expression RPAREN {
+    $$ = $2;
   }
 | NOT primary {
   }
