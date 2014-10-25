@@ -2,7 +2,7 @@
   var inspect = require('util').inspect
     , _ = require('underscore')
     , blocks = []
-    , cfgs = []
+    , id = 0
     , count = 0;
 
     // go through every block and print out
@@ -11,6 +11,7 @@
       var combined = _.chain(blocks)
         .pluck('block')
         .flatten()
+        .compact()
         .map(function(block) {
           return block.split(' ')[0];
         })
@@ -24,6 +25,20 @@
       });
       console.log();
     };
+
+    var addBlock = function (block) {
+      // make sure start is set
+      if (!block.start) {
+        block.start = block.end;
+      }
+
+      // add id for graph
+      block.id = id++;
+      // add block to list
+      blocks.push(block);
+
+      return block;
+    }
 %}
 
 %lex
@@ -244,17 +259,36 @@ compound_statement:
 statement_sequence:
   statement {
     $$ = [$1];
+    addBlock($1);
   }
 | statement_sequence SEMICOLON statement {
     var last = $1[$1.length - 1];
     /* TODO: This needs to merge based on assignment-assigment, */
     /* assignment-while, assignemnt-if i think */
+
     // merge two adjacent assignment statements
     if (last.type == 'assign' && $3.type == 'assign') {
       /* commenting out for now */
-      /* last.end = $3.end; */
-      /* last.block = last.block.concat($3.block); */
+      last.end = $3.end;
+      last.block = last.block.concat($3.block);
     }
+    else if (last.type == 'assign' && $3.type == 'if') {
+      last = _.extend(last, {
+        end: $3.end,
+        block: last.block.concat($3.block),
+        type: $3.type,
+        out: $3.out
+      });
+    }
+    else if (last.type == 'if' && $3.type == 'assign') {
+      var left = _.findWhere(blocks, { id: last.out[0] });
+      var dummy = _.findWhere(blocks, {  id: left.out[0] });
+
+      // point the dummy node the next statement
+      dummy.out = [addBlock($3).id];
+    }
+
+    // TODO: Need to do the while loop stuff
     else if (typeof $3 != 'string') {
       $1.push($3);
     }
@@ -279,36 +313,63 @@ statement:
 while_statement:
   WHILE boolean_expression DO statement {
     $2.type = 'while';
-    blocks.push($2);
+    $2.out = [];
+
+    addBlock($2);
     if ($4.type == 'compound') {
       $4.forEach(function (t) {
-        blocks.push(t)
-      })
+        addBlock(t);
+      });
+      $2.out.push($4[$4.length - 1].id);
+
+      if (!$4[$4.length - 1].out) {
+        $4[$4.length - 1].out = [];
+      }
+      $4[$4.length - 1].out.push($2.id);
+
     } else {
-      blocks.push($4)
+      $2.out.push($4.id);
+      if (!$4.out) {
+        $4.out = [];
+      }
+
+      $4.out.push($2.id);
+      addBlock($4);
     }
+
+    $$ = $2;
   }
 ;
 
 if_statement:
   IF boolean_expression THEN statement ELSE statement {
     $2.type = 'if';
-    blocks.push($2);
+    $2.out = [];
+
+    var dummy = addBlock({ dummy: true, inc: 0 });
     if ($4.type == 'compound') {
-      $4.forEach(function (t) {
-        blocks.push(t)
-      })
+      $2.out.push($4[0].id);
+
+      // append dummy node to last of true
+      var last = $4[$4.length - 1];
+      last.out = [dummy.id];
     } else {
-      blocks.push($4)
-    }
-    if ($6.type == 'compound') {
-      $6.forEach(function (t) {
-        blocks.push(t)
-      })
-    } else {
-      blocks.push($6)
+      $2.out.push($4.id);
+      $4.out = [dummy.id];
     }
 
+    if ($6.type == 'compound') {
+      $2.out.push($6[0].id);
+
+      // append dummy
+      var last = $6[$6.length - 1];
+      last.out = [dummy.id];
+    } else {
+      $2.out.push($6.id);
+      $6.out = [dummy.id];
+    }
+
+    $$ = $2;
     /* console.log(JSON.stringify($2, null, 2)); */
   }
 ;
@@ -318,7 +379,6 @@ assignment_statement:
     $3.block.push($1 + ' = ' + $3.end);
     $3.end = $1;
     $$ = $3;
-    blocks.push($3);
     //console.log(JSON.stringify($$, null, 2));
   }
 | variable_access ASSIGNMENT object_instantiation {
