@@ -20,11 +20,11 @@
         .sort()
         .value()
 
-      console.log('Vars (output 1)');
+      //console.log('Vars (output 1)');
       combined.forEach(function(varName) {
-        console.log(varName);
+        //console.log(varName);
       });
-      console.log();
+      //console.log();
     };
 
     var addBlock = function (block) {
@@ -39,6 +39,32 @@
       blocks.push(block);
 
       return block;
+    }
+    var printGraph = function () {
+      console.log('digraph cfg {');
+
+      blocks.forEach(function (b) {
+        if (b.block) {
+          var node = '"' + b.block.join('\n') + '"';
+        } else {
+          var node = "dummy";
+        }
+        console.log(node);
+        if (b.out) {
+          b.out.forEach(function (o) {
+            var to = blocks.filter(function (b) {
+              return b.id ==  o;
+            })[0]
+            if (to.block) {
+              console.log(node + '->' + '"' + to.block.join('\n') + '"' + ";");
+            } else {
+              console.log(node + '->' + 'dummy');
+            }
+          })
+        }
+      })
+
+      console.log('}');
     }
 %}
 
@@ -103,10 +129,11 @@
 
 program:
   program_heading SEMICOLON class_list DOT {
-    console.log(JSON.stringify(blocks, null, 2));
-    printVars();
-    console.log('enter block id: ' + enter);
-    console.log('exit block id: ' + exit);
+    //console.log(JSON.stringify(blocks, null, 2));
+    //printVars();
+    //console.log('enter block id: ' + enter);
+    //console.log('exit block id: ' + exit);
+    printGraph();
   }
 ;
 
@@ -350,7 +377,7 @@ while_statement:
 
 if_statement:
   IF boolean_expression THEN statement ELSE statement {
-    console.log($2);
+    //console.log($2);
     $2.type = 'if';
     $2.out = [];
 
