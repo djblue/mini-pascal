@@ -374,7 +374,6 @@ if_statement:
     $2.type = 'if';
     $2.out = [];
 
-    addBlock($2);
     var dummy = addBlock({ dummy: true, inc: 0 });
     if ($4.type == 'compound') {
       $2.out.push($4[0].id);
