@@ -290,6 +290,7 @@ statement_sequence:
       var dummy = _.findWhere(blocks, {  id: left.out[0] });
 
       // point the dummy node the next statement
+      // point the dummy node the next statement
       dummy.out = [addBlock($3).id];
       $1.push($3);
     }
@@ -349,6 +350,7 @@ while_statement:
 
 if_statement:
   IF boolean_expression THEN statement ELSE statement {
+    console.log($2);
     $2.type = 'if';
     $2.out = [];
 
@@ -360,6 +362,7 @@ if_statement:
       var last = $4[$4.length - 1];
       last.out = [dummy.id];
     } else {
+      addBlock($4);
       $2.out.push($4.id);
       $4.out = [dummy.id];
     }
@@ -371,6 +374,7 @@ if_statement:
       var last = $6[$6.length - 1];
       last.out = [dummy.id];
     } else {
+      addBlock($6);
       $2.out.push($6.id);
       $6.out = [dummy.id];
     }
