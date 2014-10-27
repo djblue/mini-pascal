@@ -49,7 +49,7 @@
 
       blocks.forEach(function (b) {
         if (b.block) {
-          var node = '"' + b.block.join('\n') + '"';
+          var node = '"' + b.id + '\n' + b.block.join('\n') + '"';
         } else {
           var node = "dummy";
         }
@@ -60,9 +60,9 @@
               return b.id ==  o;
             })[0]
             if (to.block) {
-              console.log(node + '->' + '"' + to.block.join('\n') + '"' + ";");
+              console.log(node + '->' + '"' + to.id + '\n' + to.block.join('\n') + '"' + ";");
             } else {
-              console.log(node + '->' + 'dummy');
+              console.log(node + '->' + '" ' + to.id + '\ndummy"');
             }
           })
         }
