@@ -3,6 +3,7 @@
     , _ = require('underscore')
     , blocks = []
     , id = 0
+    , enter = null, exit = null
     , count = 0;
 
     // go through every block and print out
@@ -104,6 +105,8 @@ program:
   program_heading SEMICOLON class_list DOT {
     console.log(JSON.stringify(blocks, null, 2));
     printVars();
+    console.log('enter block id: ' + enter);
+    console.log('exit block id: ' + exit);
   }
 ;
 
@@ -242,6 +245,8 @@ function_identification:
 function_block:
   variable_declaration_part statement_part {
     //console.log(JSON.stringify($2, null, 2));
+    enter = $2[0].id;
+    exit = $2[$2.length - 1].id;
   }
 ;
 
@@ -286,6 +291,7 @@ statement_sequence:
 
       // point the dummy node the next statement
       dummy.out = [addBlock($3).id];
+      $1.push($3);
     }
 
     // TODO: Need to do the while loop stuff
