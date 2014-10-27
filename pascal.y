@@ -28,6 +28,10 @@
     };
 
     var addBlock = function (block) {
+      if (block.id != null) {
+        return block;
+      }
+
       // make sure start is set
       if (!block.start) {
         block.start = block.end;
@@ -295,6 +299,20 @@ statement_sequence:
       $1.push($3);
     }
 
+    else if (last.type == 'assign' && $3.type == 'while') {
+      last.out = [];
+      last.out = $3.id;
+    }
+
+    else if (last.type == 'while' && $3.type == 'assign') {
+      var dummy = _.findWhere(blocks, {  id: last.out[1] });
+
+      // point the dummy node the next statement
+      // point the dummy node the next statement
+      dummy.out($3.id);
+      $1.push($3);
+    }
+
     // TODO: Need to do the while loop stuff
     else if (typeof $3 != 'string') {
       $1.push($3);
@@ -333,7 +351,6 @@ while_statement:
         $4[$4.length - 1].out = [];
       }
       $4[$4.length - 1].out.push($2.id);
-
     } else {
       $2.out.push($4.id);
       if (!$4.out) {
@@ -344,16 +361,20 @@ while_statement:
       addBlock($4);
     }
 
+    // add dummy false condition
+    var dummy = addBlock({ dummy: true, inc: 0 });
+    $2.out.push(dummy.id);
+
     $$ = $2;
   }
 ;
 
 if_statement:
   IF boolean_expression THEN statement ELSE statement {
-    console.log($2);
     $2.type = 'if';
     $2.out = [];
 
+    addBlock($2);
     var dummy = addBlock({ dummy: true, inc: 0 });
     if ($4.type == 'compound') {
       $2.out.push($4[0].id);
