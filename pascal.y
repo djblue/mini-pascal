@@ -61,6 +61,13 @@
       return dummy;
     };
 
+    var printInfo = function () {
+      console.log(JSON.stringify(blocks, null, 2));
+      printVars();
+      console.log('enter block id: ' + enter);
+      console.log('exit block id: ' + exit);
+    };
+
     // TODO: Fix this so that dummy nodes arent
     // created twice.
     var printGraph = function () {
@@ -152,11 +159,11 @@
 
 program:
   program_heading SEMICOLON class_list DOT {
-    console.log(JSON.stringify(blocks, null, 2));
-    printVars();
-    console.log('enter block id: ' + enter);
-    console.log('exit block id: ' + exit);
-    // printGraph();
+    if (process.argv[3] == '--graph') {
+      printGraph();
+    } else {
+      printInfo()
+    }
   }
 ;
 
