@@ -49,8 +49,8 @@
     // helper method for adding dummies as blocks
     // note: sets the 'lastDummy' for connect consecutive
     // dummies
-    var addDummy = function() {
-      var dummy = addBlock({ dummy: true, out: [] });
+    var addDummy = function () {
+      var dummy = addBlock({ dummy: true, count: 0, out: [] });
 
       // this is for connecting consecutive dummy nodes
       if (lastDummy && !lastDummy.out.length) {
@@ -124,6 +124,45 @@
 
       console.log('}');
     }
+
+    var forwardDummy = function (dummies, block) {
+      if (block.out) {
+        var forward = false;
+        var out = block.out.map(function (o) {
+          if (dummies[o] && dummies[o].out > 0) {
+            dummies[o].count--;
+            forward = true;
+            return dummies[o].out;
+          } else {
+            return [o];
+          }
+        })
+        var flat = [].concat.apply([], out);
+        block.out = flat;
+        if (forward) {
+          forwardDummies(dummies, block);
+        }
+      }
+    };
+
+    var forwardDummies = function () {
+      var dummies = blocks.reduce(function (map, b) {
+        if (b.dummy) {
+          map[b.id] = b;
+        }
+        return map;
+      }, {});
+      blocks.forEach(function (block) {
+        forwardDummy(dummies, block)
+      });
+      blocks = blocks.filter(function (block) {
+        if (block.count < 1) {
+          return false
+        } else {
+          return true;
+        }
+      })
+    };
 %}
 
 %lex
@@ -188,6 +227,7 @@
 program:
   program_heading SEMICOLON class_list DOT {
     traverseDummy();
+    forwardDummies();
 
     if (process.argv[3] == '--graph') {
       printGraph();
@@ -488,6 +528,7 @@ while_statement:
     // add dummy false condition
     var dummy = addDummy();
     $2.out.push(dummy.id);
+    dummy.count++;
 
     $$ = $2;
   }
@@ -514,6 +555,7 @@ if_statement:
       // won't work
       if (!last.out) {
         last.out = [dummy.id];
+        dummy.count++;
       }
     }
     else {
@@ -524,6 +566,7 @@ if_statement:
 
       // point the true condition the dummy
       $4.out = [dummy.id];
+      dummy.count++;
     }
 
     // same rules as true branch
@@ -534,6 +577,7 @@ if_statement:
       var last = $6[$6.length - 1];
       if (!last.out) {
         last.out = [dummy.id];
+        dummy.count++;
       }
     }
     else {
@@ -541,6 +585,7 @@ if_statement:
 
       $2.out.push($6.id);
       $6.out = [dummy.id];
+      dummy.count++;
     }
 
     $$ = $2;
