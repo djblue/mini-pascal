@@ -122,6 +122,15 @@
         }
       })
 
+      var end = blocks.filter(function (b) {
+        return b.id == exit;
+      })[0];
+      if (end.block) {
+        console.log('end -> "' + end.id + '\n' + end.block.join('\n') + '"');
+      } else {
+        console.log('end ->' + ' "' + end.id + '\ndummy"');
+      }
+
       console.log('}');
     }
 
