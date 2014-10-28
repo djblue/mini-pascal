@@ -81,7 +81,7 @@
         if (b.block) {
           var node = '"' + b.id + '\n' + b.block.join('\n') + '"';
         } else {
-          var node = "dummy";
+          var node = '"' + b.id + '\ndummy"';
         }
         /* console.log(node); */
         if (b.out) {
@@ -92,7 +92,7 @@
             if (to.block) {
               console.log(node + '->' + '"' + to.id + '\n' + to.block.join('\n') + '"' + ";");
             } else {
-              console.log(node + '->' + '" ' + to.id + '\ndummy"');
+              console.log(node + '->' + ' "' + to.id + '\ndummy"');
             }
           })
         }
