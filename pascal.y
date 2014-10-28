@@ -54,7 +54,7 @@
 
       // this is for connecting consecutive dummy nodes
       if (lastDummy && !lastDummy.out.length) {
-        lastDummy.out.push(dummy.id);
+        lastDummy.out = [dummy.id];
       }
       lastDummy = dummy;
 
@@ -355,7 +355,7 @@ statement_sequence:
       var dummy = _.findWhere(blocks, {  id: left.out[0] });
 
       // point the dummy node the next statement
-      dummy.out.push(addBlock($3).id);
+      dummy.out = [addBlock($3).id];
       $1.push($3);
     }
 
@@ -373,7 +373,7 @@ statement_sequence:
       var dummy = _.findWhere(blocks, {  id: last.out[1] });
 
       // point the dummy node the next statement
-      dummy.out.push(addBlock($3).id);
+      dummy.out = [addBlock($3).id];
       $1.push($3);
     }
 
@@ -384,7 +384,7 @@ statement_sequence:
       var dummy = _.findWhere(blocks, {  id: last.out[1] });
 
       // point the dummy to the start of the if condition
-      dummy.out.push(addBlock($3).id);
+      dummy.out = [addBlock($3).id];
       $1.push($3);
     }
 
@@ -395,7 +395,7 @@ statement_sequence:
       var dummy = _.findWhere(blocks, {  id: left.out[0] });
 
       // point the dummy node the next statement
-      dummy.out.push(addBlock($3).id);
+      dummy.out = [addBlock($3).id];
       $1.push($3);
     }
   }
