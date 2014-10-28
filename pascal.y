@@ -327,6 +327,7 @@ statement_sequence:
   statement {
     $$ = [$1];
     addBlock($1);
+    // console.log('$1 ' + JSON.stringify($1, null, 2));
   }
 | statement_sequence SEMICOLON statement {
     var last = $1[$1.length - 1];
@@ -353,10 +354,15 @@ statement_sequence:
     // node to assignment
     else if (last.type == 'if' && $3.type == 'assign') {
       var left = _.findWhere(blocks, { id: last.out[0] });
-      var dummy = _.findWhere(blocks, {  id: left.out[0] });
+      var dummy = _.findWhere(blocks, {  id: left.out [0] });
+
+      // the branch could be another complex statement :S
+      if (left.type == 'if' || left.type == 'while')
+        lastDummy.out = [addBlock($3).id];
+      else
+        dummy.out = [addBlock($3).id];
 
       // point the dummy node the next statement
-      dummy.out = [addBlock($3).id];
       $1.push($3);
     }
 
@@ -481,7 +487,7 @@ if_statement:
       // I don't like this, but it works. If you have
       // an if and another if the following assignemnt
       // won't work
-      if (!last.out || last.out.length != 2) {
+      if (!last.out) {
         last.out = [dummy.id];
       }
     }
@@ -501,7 +507,7 @@ if_statement:
 
       // append dummy
       var last = $6[$6.length - 1];
-      if (!last.out || last.out.length != 2) {
+      if (!last.out) {
         last.out = [dummy.id];
       }
     }
