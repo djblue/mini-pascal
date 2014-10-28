@@ -72,6 +72,10 @@
     // created twice.
     var printGraph = function () {
       console.log('digraph cfg {');
+      var start = blocks.filter(function (b) {
+        return b.id ==  enter;
+      })[0];
+      console.log('start -> "' + start.id + '\n' + start.block.join('\n') + '"');
 
       blocks.forEach(function (b) {
         if (b.block) {
@@ -162,7 +166,7 @@ program:
     if (process.argv[3] == '--graph') {
       printGraph();
     } else {
-      printInfo()
+      printInfo();
     }
   }
 ;
