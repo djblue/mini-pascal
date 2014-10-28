@@ -49,7 +49,7 @@
     // helper method for adding dummies as blocks
     // note: sets the 'lastDummy' for connect consecutive
     // dummies
-    var addDummy = function () {
+    var addDummy = function() {
       var dummy = addBlock({ dummy: true, out: [] });
 
       // this is for connecting consecutive dummy nodes
@@ -60,6 +60,29 @@
 
       return dummy;
     };
+
+    // check if exit has a dummy node,
+    // if it does, traverse the dummies
+    var traverseDummy = function() {
+      var exitNode = blocks[exit];
+      if (!exitNode.out) {
+        return;
+      }
+
+      var complex = isComplex(exitNode);
+      var dummy = blocks[exitNode.out[complex]];
+
+      while (dummy.out.length) {
+        complex = isComplex(dummy);
+        dummy = blocks[dummy.out[complex]];
+      }
+
+      exit = dummy.id;
+    };
+
+    var isComplex = function(block) {
+      return (block.type == 'if' || block.type == 'while') ? 1 : 0;
+    }
 
     var printInfo = function () {
       console.log(JSON.stringify(blocks, null, 2));
@@ -164,6 +187,8 @@
 
 program:
   program_heading SEMICOLON class_list DOT {
+    traverseDummy();
+
     if (process.argv[3] == '--graph') {
       printGraph();
     } else {
