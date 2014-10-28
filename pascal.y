@@ -4,6 +4,7 @@
     , blocks = []
     , id = 0
     , enter = null, exit = null
+    , lastDummy = null
     , count = 0;
 
     // go through every block and print out
@@ -43,6 +44,51 @@
       blocks.push(block);
 
       return block;
+    }
+
+    // helper method for adding dummies as blocks
+    // note: sets the 'lastDummy' for connect consecutive
+    // dummies
+    var addDummy = function () {
+      block.dummy = true;
+      var dummy = addBlock({ dummy: true, out: [] });
+
+      // this is for connecting consecutive dummy nodes
+      if (lastDummy && !lastDummy.out.length) {
+        lastDummy.out.push(dummy.id);
+      }
+      lastDummy = dummy;
+
+      return dummy;
+    };
+
+    // TODO: Fix this so that dummy nodes arent
+    // created twice.
+    var printGraph = function () {
+      console.log('digraph cfg {');
+
+      blocks.forEach(function (b) {
+        if (b.block) {
+          var node = '"' + b.id + '\n' + b.block.join('\n') + '"';
+        } else {
+          var node = "dummy";
+        }
+        /* console.log(node); */
+        if (b.out) {
+          b.out.forEach(function (o) {
+            var to = blocks.filter(function (b) {
+              return b.id ==  o;
+            })[0]
+            if (to.block) {
+              console.log(node + '->' + '"' + to.id + '\n' + to.block.join('\n') + '"' + ";");
+            } else {
+              console.log(node + '->' + '" ' + to.id + '\ndummy"');
+            }
+          })
+        }
+      })
+
+      console.log('}');
     }
 %}
 
@@ -111,6 +157,7 @@ program:
     printVars();
     console.log('enter block id: ' + enter);
     console.log('exit block id: ' + exit);
+    // printGraph();
   }
 ;
 
@@ -272,15 +319,16 @@ statement_sequence:
   }
 | statement_sequence SEMICOLON statement {
     var last = $1[$1.length - 1];
-    /* TODO: This needs to merge based on assignment-assigment, */
-    /* assignment-while, assignemnt-if i think */
+    // console.log('last ' + JSON.stringify(last, null, 2));
+    // console.log('$3 ' + JSON.stringify($3, null, 2));
 
     // merge two adjacent assignment statements
     if (last.type == 'assign' && $3.type == 'assign') {
-      /* commenting out for now */
       last.end = $3.end;
       last.block = last.block.concat($3.block);
     }
+
+    // these can be joined into one block, so just do that
     else if (last.type == 'assign' && $3.type == 'if') {
       last = _.extend(last, {
         end: $3.end,
@@ -289,32 +337,55 @@ statement_sequence:
         out: $3.out
       });
     }
+
+    // these cant be joined, instead forward the dummy
+    // node to assignment
     else if (last.type == 'if' && $3.type == 'assign') {
       var left = _.findWhere(blocks, { id: last.out[0] });
       var dummy = _.findWhere(blocks, {  id: left.out[0] });
 
       // point the dummy node the next statement
-      // point the dummy node the next statement
-      dummy.out = [addBlock($3).id];
+      dummy.out.push(addBlock($3).id);
       $1.push($3);
     }
 
+    // these cant be joined, instead point the assign
+    // statement to the while condition
     else if (last.type == 'assign' && $3.type == 'while') {
       last.out = [];
-      last.out = $3.id;
+      last.out.push(addBlock($3).id);
+      $1.push($3);
     }
 
+    // these cant be joined, instead point the while
+    // dummy node to the assign statement
     else if (last.type == 'while' && $3.type == 'assign') {
       var dummy = _.findWhere(blocks, {  id: last.out[1] });
 
       // point the dummy node the next statement
-      // point the dummy node the next statement
-      dummy.out($3.id);
+      dummy.out.push(addBlock($3).id);
       $1.push($3);
     }
 
-    // TODO: Need to do the while loop stuff
-    else if (typeof $3 != 'string') {
+
+    // these cant be joined, instead point the while
+    // dummy node to the if condition block
+    else if (last.type == 'while' && $3.type == 'if') {
+      var dummy = _.findWhere(blocks, {  id: last.out[1] });
+
+      // point the dummy to the start of the if condition
+      dummy.out.push(addBlock($3).id);
+      $1.push($3);
+    }
+
+    // these cant be joined, instead point the if dummy
+    // to the while dummy
+    else if (last.type == 'if' && $3.type == 'while') {
+      var left = _.findWhere(blocks, { id: last.out[0] });
+      var dummy = _.findWhere(blocks, {  id: left.out[0] });
+
+      // point the dummy node the next statement
+      dummy.out.push(addBlock($3).id);
       $1.push($3);
     }
   }
@@ -336,6 +407,8 @@ statement:
 ;
 
 while_statement:
+  // TODO: Refactor how this is parsed if we have time. I'm pretty sure
+  // this can be done in a muuuuch easier way.
   WHILE boolean_expression DO statement {
     $2.type = 'while';
     $2.out = [];
@@ -345,24 +418,33 @@ while_statement:
       $4.forEach(function (t) {
         addBlock(t);
       });
-      $2.out.push($4[$4.length - 1].id);
+
+      // connect the condition to the body
+      $2.out.push($4[0].id);
 
       if (!$4[$4.length - 1].out) {
         $4[$4.length - 1].out = [];
       }
-      $4[$4.length - 1].out.push($2.id);
-    } else {
+
+      // connect the body back to the condition
+      var last = $4[$4.length - 1];
+      last.out.push($2.id);
+    }
+    else {
+      // connect the condition to the body
       $2.out.push($4.id);
+
       if (!$4.out) {
         $4.out = [];
       }
 
+      // connect the body back to the condition
       $4.out.push($2.id);
       addBlock($4);
     }
 
     // add dummy false condition
-    var dummy = addBlock({ dummy: true, inc: 0 });
+    var dummy = addDummy();
     $2.out.push(dummy.id);
 
     $$ = $2;
@@ -370,32 +452,51 @@ while_statement:
 ;
 
 if_statement:
+  // TODO: Refactor how this is parsed if we have time. I'm pretty sure
+  // this can be done in a muuuuch easier way.
   IF boolean_expression THEN statement ELSE statement {
     $2.type = 'if';
     $2.out = [];
 
-    addBlock($2);
-    var dummy = addBlock({ dummy: true, inc: 0 });
+    var dummy = addDummy();
     if ($4.type == 'compound') {
+
+      // point the condition to the true branch
       $2.out.push($4[0].id);
 
       // append dummy node to last of true
       var last = $4[$4.length - 1];
-      last.out = [dummy.id];
-    } else {
+
+      // I don't like this, but it works. If you have
+      // an if and another if the following assignemnt
+      // won't work
+      if (!last.out || last.out.length != 2) {
+        last.out = [dummy.id];
+      }
+    }
+    else {
       addBlock($4);
+
+      // point the condition to the true branch
       $2.out.push($4.id);
+
+      // point the true condition the dummy
       $4.out = [dummy.id];
     }
 
+    // same rules as true branch
     if ($6.type == 'compound') {
       $2.out.push($6[0].id);
 
       // append dummy
       var last = $6[$6.length - 1];
-      last.out = [dummy.id];
-    } else {
+      if (!last.out || last.out.length != 2) {
+        last.out = [dummy.id];
+      }
+    }
+    else {
       addBlock($6);
+
       $2.out.push($6.id);
       $6.out = [dummy.id];
     }
