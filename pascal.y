@@ -72,6 +72,7 @@
     // created twice.
     var printGraph = function () {
       console.log('digraph cfg {');
+      console.log('node [style=filled, shape=box]');
       var start = blocks.filter(function (b) {
         return b.id ==  enter;
       })[0];
