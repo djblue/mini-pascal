@@ -50,7 +50,6 @@
     // note: sets the 'lastDummy' for connect consecutive
     // dummies
     var addDummy = function () {
-      block.dummy = true;
       var dummy = addBlock({ dummy: true, out: [] });
 
       // this is for connecting consecutive dummy nodes
