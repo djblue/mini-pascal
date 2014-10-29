@@ -135,7 +135,7 @@
     }
 
     var forwardDummy = function (dummies, block) {
-      if (block.out) {
+			if (block.out) {
         var forward = false;
         var out = block.out.map(function (o) {
           if (dummies[o] && dummies[o].out > 0) {
@@ -172,6 +172,27 @@
         }
       })
     };
+
+		var addIn = function () {
+		  for(var j = 0; j < blocks.length ; j++ ){
+				blocks[j].in = [];	
+			}
+			
+		  for(var j = 0; j < blocks.length ; j++ ){
+				for(var prop in blocks[j].out){
+					var vout = blocks[j].out[prop];
+					var outId = blocks[j].id;
+				
+					for(var i = 0; i < blocks.length; i++){
+						if(blocks[i].id == vout){
+							blocks[i].in.push(outId);
+	
+						}
+					}	
+				}			
+			}
+			
+		};
 %}
 
 %lex
@@ -237,11 +258,12 @@ program:
   program_heading SEMICOLON class_list DOT {
     traverseDummy();
     forwardDummies();
+		addIn();
 
     if (process.argv[3] == '--graph') {
       printGraph();
     } else {
-      printInfo();
+     printInfo();
     }
   }
 ;
@@ -549,7 +571,8 @@ if_statement:
   IF boolean_expression THEN statement ELSE statement {
     $2.type = 'if';
     $2.out = [];
-
+    //$2.in = [];
+		//console.log($2);
     var dummy = addDummy();
     if ($4.type == 'compound') {
 
