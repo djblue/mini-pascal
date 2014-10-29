@@ -173,24 +173,24 @@
       })
     };
 
-		var addIn = function () {
-		  for(var j = 0; j < blocks.length ; j++ ){
-				blocks[j].in = [];	
-			}
+    var addIn = function () {
+      for(var j = 0; j < blocks.length ; j++ ){
+        blocks[j].in = [];	
+      }
 			
-		  for(var j = 0; j < blocks.length ; j++ ){
-				for(var prop in blocks[j].out){
-					var vout = blocks[j].out[prop];
-					var outId = blocks[j].id;
+      for(var j = 0; j < blocks.length ; j++ ){
+        for(var prop in blocks[j].out){
+          var vout = blocks[j].out[prop];
+          var outId = blocks[j].id;
 				
-					for(var i = 0; i < blocks.length; i++){
-						if(blocks[i].id == vout){
-							blocks[i].in.push(outId);
+          for(var i = 0; i < blocks.length; i++){
+            if(blocks[i].id == vout){
+              blocks[i].in.push(outId);
 	
-						}
-					}	
-				}			
-			}
+            }
+          }	
+        }			
+      }
 			
 		};
 %}
@@ -258,7 +258,7 @@ program:
   program_heading SEMICOLON class_list DOT {
     traverseDummy();
     forwardDummies();
-		addIn();
+    addIn();
 
     if (process.argv[3] == '--graph') {
       printGraph();
