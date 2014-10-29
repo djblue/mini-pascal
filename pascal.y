@@ -135,7 +135,7 @@
     }
 
     var forwardDummy = function (dummies, block) {
-			if (block.out) {
+      if (block.out) {
         var forward = false;
         var out = block.out.map(function (o) {
           if (dummies[o] && dummies[o].out > 0) {
@@ -263,7 +263,7 @@ program:
     if (process.argv[3] == '--graph') {
       printGraph();
     } else {
-     printInfo();
+      printInfo();
     }
   }
 ;
@@ -571,8 +571,6 @@ if_statement:
   IF boolean_expression THEN statement ELSE statement {
     $2.type = 'if';
     $2.out = [];
-    //$2.in = [];
-		//console.log($2);
     var dummy = addDummy();
     if ($4.type == 'compound') {
 
