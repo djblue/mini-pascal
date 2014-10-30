@@ -5,6 +5,7 @@
     , id = 0
     , enter = null, exit = null
     , lastDummy = null
+    , IDENTIFIER = /[a-zA-Z][a-zA-Z0-9]+/
     , count = 0;
 
     // go through every block and print out
@@ -15,8 +16,9 @@
         .flatten()
         .compact()
         .map(function(block) {
-          return block.split(' ')[0];
+          return block.match(IDENTIFIER);
         })
+        .flatten()
         .uniq()
         .sort()
         .value()
