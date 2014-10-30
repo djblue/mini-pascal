@@ -1,6 +1,5 @@
 %{
-  var inspect = require('util').inspect
-    , _ = require('underscore')
+  var _ = require('underscore')
     , blocks = []
     , id = 0
     , enter = null, exit = null
@@ -59,7 +58,9 @@
       // this is for connecting consecutive dummy nodes
       if (lastDummy && !lastDummy.out.length) {
         lastDummy.out = [dummy.id];
+        dummy.count++;
       }
+
       lastDummy = dummy;
 
       return dummy;
@@ -185,6 +186,11 @@
           to.in.push(block.id);
         });
 
+      });
+    };
+
+    var valueNumbering = function () {
+      blocks.forEach(function (b) {
       });
     };
 %}
