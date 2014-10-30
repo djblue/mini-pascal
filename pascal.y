@@ -33,6 +33,8 @@
         return block;
       }
 
+      block.in = [];
+
       // make sure start is set
       if (!block.start) {
         block.start = block.end;
@@ -174,25 +176,15 @@
     };
 
     var addIn = function () {
-      for(var j = 0; j < blocks.length ; j++ ){
-        blocks[j].in = [];	
-      }
-			
-      for(var j = 0; j < blocks.length ; j++ ){
-        for(var prop in blocks[j].out){
-          var vout = blocks[j].out[prop];
-          var outId = blocks[j].id;
-				
-          for(var i = 0; i < blocks.length; i++){
-            if(blocks[i].id == vout){
-              blocks[i].in.push(outId);
-	
-            }
-          }	
-        }			
-      }
-			
-		};
+      blocks.forEach(function(block) {
+
+        block.out && block.out.forEach(function(out) {
+          var to = _.findWhere(blocks, { id: out });
+          to.in.push(block.id);
+        });
+
+      });
+    };
 %}
 
 %lex
@@ -257,8 +249,13 @@
 program:
   program_heading SEMICOLON class_list DOT {
     traverseDummy();
-    forwardDummies();
     addIn();
+
+    // this removes nodes so it needs to be last
+    // TODO: Fix a weird bug where this is either removing
+    // nodes and not updating out arrays or incorrectly 
+    // remove nodes. see tests/if_if.p
+    forwardDummies();
 
     if (process.argv[3] == '--graph') {
       printGraph();
@@ -571,6 +568,7 @@ if_statement:
   IF boolean_expression THEN statement ELSE statement {
     $2.type = 'if';
     $2.out = [];
+
     var dummy = addDummy();
     if ($4.type == 'compound') {
 
