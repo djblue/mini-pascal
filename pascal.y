@@ -189,9 +189,167 @@
       });
     };
 
-    var valueNumbering = function () {
-      blocks.forEach(function (b) {
-      });
+    var processBlock = function (b) {
+
+        // value numbers
+        var v = {};
+
+        // hash values
+        var h = {};
+        var hashes = 0;
+        var index = 0;
+        var block = b.block;
+
+        var newHash = function(id) {
+          var hash = '#' + ++hashes;
+          v[id] = {
+            hash: hash
+          };
+
+          h[hash] = {
+            expr: hash,
+            hash: hash
+          };
+
+          // if number, dont add to table
+          // just return it
+          if (!isNaN(+id)) {
+            v[id].const = true;
+            v[id].value = Number(id);
+          }
+
+          return v[id];
+        };
+
+        var lookup = function(id) {
+          if (id == undefined) {
+            return {};
+          }
+
+          return v[id] || newHash(id);
+        };
+
+        // finds the expression in the h table
+        var findExpr = function(op, v1, v2) {
+          var h1 = v1.hash;
+          var h2 = v2.hash;
+          var expr;
+          if (op == '+' || op == '*') {
+            var v1 = h1 && Number(h1.slice(1));
+            var v2 = h2 && Number(h2.slice(1));
+            expr = (v2 > v1) ? [op, h2, h1] : [op, h1, h2];
+          }
+          else {
+            expr = [op, h1, h2];
+          }
+
+          expr = expr.join('');
+          var exists = _.chain(h)
+            .values()
+            .find(function (row) {
+              return row.expr == expr || row.hash == expr;
+            })
+            .value()
+
+          if (exists) {
+            return exists.hash;
+          }
+
+          var hash = '#' + ++hashes;
+          h[hash] = {
+            expr: expr,
+            hash: hash
+          };
+
+          return hash;
+        };
+
+        // a = b + c ---> <a> = <b> <op> <c>
+        var parseExpr = function(expr) {
+          var expr = expr.split(' ');
+          return {
+            a: expr[0],
+            b: expr[2],
+            op: expr[3],
+            c: expr[4]
+          }
+        };
+
+        console.log('block ' + JSON.stringify(block, null, 2));
+        var temp = [];
+        block.forEach(function(expr) {
+          // console.log('expr ' + expr);
+
+          var expr = parseExpr(expr);
+          var v1 = lookup(expr.b);
+          var v2 = lookup(expr.c);
+          var hash = findExpr(expr.op, v1, v2);
+
+          // aa = 1 + 2
+          // aa = bb + 1 where aa is a constant
+          // aa = 1 + cc where cc is a constant
+          // aa = dd + ee where dd and cc is a constant
+          if (v1.const && v2.const) {
+            v[expr.a] = {
+              const: true,
+              value: eval(v1.value + expr.op + v2.value)
+            };
+          }
+
+          // aa = 1
+          // aa = bb // where bb is a const
+          else if (v1.const && _.isEmpty(v2)) {
+            v[expr.a] = {
+              const: true,
+              value: v1.value
+            };
+          }
+
+          // aa = 1 + bb where bb is not a constant
+          // aa = cc + bb where  bb == not a constant and cc == constant
+          //else if (v1.const) {
+
+          //}
+
+          // aa = bb + 1 where bb is not a constant
+          // aa = bb + cc where  bb == not a constant and cc == constant
+          //else if (v2.const) {
+
+          //}
+
+          // aa = cc where cc is not a constant
+          // aa = aa + bb where aa and bb are not constants
+          else {
+            // console.log('v1 ' + v1.hash);
+            // console.log('v2 ' + v2.hash);
+
+            v[expr.a] = {
+              hash: hash
+            };
+          }
+
+          //temp.push(expr.a + ' = ' + );
+          //console.log('temp ' + temp);
+
+
+          // console.log('expr.b ' + expr.b);
+          // console.log('h1 ' + JSON.stringify(h1, null, 2));
+          // console.log('expr.c ' + expr.c);
+          // console.log('h2 ' + JSON.stringify(h2, null, 2));
+
+
+          index++;
+        });
+
+        console.log('v ' + JSON.stringify(v, null, 2));
+        console.log('h ' + JSON.stringify(h, null, 2));
+
+
+        // print out vars with values
+    };
+
+    var valueNumbering = function() {
+      blocks.forEach(processBlock);
     };
 %}
 
@@ -258,17 +416,18 @@ program:
   program_heading SEMICOLON class_list DOT {
     traverseDummy();
     addIn();
+    valueNumbering();
 
     // this removes nodes so it needs to be last
     // TODO: Fix a weird bug where this is either removing
-    // nodes and not updating out arrays or incorrectly 
+    // nodes and not updating out arrays or incorrectly
     // remove nodes. see tests/if_if.p
     forwardDummies();
 
     if (process.argv[3] == '--graph') {
       printGraph();
     } else {
-      printInfo();
+      // printInfo();
     }
   }
 ;

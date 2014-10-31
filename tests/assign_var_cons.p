@@ -7,8 +7,9 @@ BEGIN
 
 FUNCTION testIfThenElse;
 BEGIN
-  aa := aa + bb;
-  cc := aa + bb
+  aa := bb + 1;
+  cc := 1 + dd
+
 END
 
 END
