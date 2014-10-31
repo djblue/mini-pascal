@@ -85,10 +85,14 @@
       exit = dummy.id;
     };
 
+
+    // Checks if we need to look at the out[0] or
+    // out[1]
     var isComplex = function(block) {
       return (block.type == 'if' || block.type == 'while') ? 1 : 0;
     }
 
+    // print the vars, entry, exit
     var printInfo = function () {
       console.log(JSON.stringify(blocks, null, 2));
       printVars();
@@ -96,8 +100,6 @@
       console.log('exit block id: ' + exit);
     };
 
-    // TODO: Fix this so that dummy nodes arent
-    // created twice.
     var printGraph = function () {
       console.log('digraph cfg {');
       console.log('node [style=filled, shape=box]');
@@ -139,6 +141,7 @@
       console.log('}');
     }
 
+    // Point a dummy to the next node
     var forwardDummy = function (dummies, block) {
       if (block.out) {
         var forward = false;
@@ -159,6 +162,8 @@
       }
     };
 
+    // Forward all nodes that point to dummies to w/e
+    // the next dummy points too
     var forwardDummies = function () {
       var dummies = blocks.reduce(function (map, b) {
         if (b.dummy) {
@@ -178,6 +183,7 @@
       })
     };
 
+    // Add parent nodes
     var addIn = function () {
       blocks.forEach(function(block) {
 
@@ -189,6 +195,8 @@
       });
     };
 
+    // Go through each statement in a block
+    // and perform value numbering
     var processBlock = function (b) {
 
         // value numbers
@@ -200,6 +208,8 @@
         var index = 0;
         var block = b.block;
 
+        // create a new hash, note if a
+        // id is a NUMBER add it as a const
         var newHash = function(id) {
           var hash = '#' + ++hashes;
           v[id] = {
@@ -221,19 +231,31 @@
           return v[id];
         };
 
+        // simply look up the var in the value
+        // table, if not found create a new hash for it
         var lookup = function(id) {
-          if (id == undefined) {
-            return {};
-          }
+          if (id == undefined) return {};
 
           return v[id] || newHash(id);
         };
+
+        // check to see if there has already
+        // been a expression with same hash,
+        // if so we will reduce to that expression
+        var findPrev = function(hash) {
+          for (var key in v)
+            if (v[key].hash == hash)
+              return key;
+        }
 
         // finds the expression in the h table
         var findExpr = function(op, v1, v2) {
           var h1 = v1.hash;
           var h2 = v2.hash;
           var expr;
+
+          // if its commutative, then make sure to
+          // order the larger hash first
           if (op == '+' || op == '*') {
             var v1 = h1 && Number(h1.slice(1));
             var v2 = h2 && Number(h2.slice(1));
@@ -243,7 +265,12 @@
             expr = [op, h1, h2];
           }
 
+          // join the hashes, i.e +#2#1
           expr = expr.join('');
+
+          // search for the hash in the hashes
+          // make sure to check hash and expr in
+          // case of complex expressions like #3: +#2#1
           var exists = _.chain(h)
             .values()
             .find(function (row) {
@@ -251,19 +278,23 @@
             })
             .value()
 
+          // if it exists, make sure to return the HASH,
+          // i.e #3, not +#2#1
           if (exists) {
             return exists.hash;
           }
 
+          // add a new has if not found
           var hash = '#' + ++hashes;
           h[hash] = {
-            expr: expr,
-            hash: hash
+            expr: expr, // combined expr
+            hash: hash  // the lhs
           };
 
           return hash;
         };
 
+        // parse an assignment and return an object
         // a = b + c ---> <a> = <b> <op> <c>
         var parseExpr = function(expr) {
           var expr = expr.split(' ');
@@ -275,15 +306,20 @@
           }
         };
 
-        console.log('block ' + JSON.stringify(block, null, 2));
-        var temp = [];
-        block.forEach(function(expr) {
-          // console.log('expr ' + expr);
+        var numberedBlock = [];
 
+        // comment out to compare
+        console.log('block '+ JSON.stringify(block, null, 2));
+
+        // go through each expression in a block
+        // and perform number value stuff on it
+        block.forEach(function(expr) {
           var expr = parseExpr(expr);
           var v1 = lookup(expr.b);
           var v2 = lookup(expr.c);
           var hash = findExpr(expr.op, v1, v2);
+          var prev = findPrev(hash);
+
 
           // aa = 1 + 2
           // aa = bb + 1 where aa is a constant
@@ -292,7 +328,8 @@
           if (v1.const && v2.const) {
             v[expr.a] = {
               const: true,
-              value: eval(v1.value + expr.op + v2.value)
+              value: eval(v1.value + expr.op + v2.value),
+              hash: hash
             };
           }
 
@@ -301,51 +338,30 @@
           else if (v1.const && _.isEmpty(v2)) {
             v[expr.a] = {
               const: true,
-              value: v1.value
+              value: v1.value,
+              hash: hash
             };
           }
-
-          // aa = 1 + bb where bb is not a constant
-          // aa = cc + bb where  bb == not a constant and cc == constant
-          //else if (v1.const) {
-
-          //}
-
-          // aa = bb + 1 where bb is not a constant
-          // aa = bb + cc where  bb == not a constant and cc == constant
-          //else if (v2.const) {
-
-          //}
 
           // aa = cc where cc is not a constant
           // aa = aa + bb where aa and bb are not constants
           else {
-            // console.log('v1 ' + v1.hash);
-            // console.log('v2 ' + v2.hash);
-
             v[expr.a] = {
               hash: hash
             };
           }
 
-          //temp.push(expr.a + ' = ' + );
-          //console.log('temp ' + temp);
+          // build the statement
+          var rhs = prev || (expr.b + ' ' + expr.op + ' ' + expr.c);
+          var statement = expr.a + ' = ' + rhs;
 
-
-          // console.log('expr.b ' + expr.b);
-          // console.log('h1 ' + JSON.stringify(h1, null, 2));
-          // console.log('expr.c ' + expr.c);
-          // console.log('h2 ' + JSON.stringify(h2, null, 2));
-
-
-          index++;
+          // add the reduced statement to the block
+          numberedBlock.push(statement);
         });
 
-        console.log('v ' + JSON.stringify(v, null, 2));
-        console.log('h ' + JSON.stringify(h, null, 2));
-
-
-        // print out vars with values
+        // console.log('v ' + JSON.stringify(v, null, 2));
+        // console.log('h ' + JSON.stringify(h, null, 2));
+        console.log('reduced block '+ JSON.stringify(numberedBlock, null, 2));
     };
 
     var valueNumbering = function() {
@@ -416,7 +432,6 @@ program:
   program_heading SEMICOLON class_list DOT {
     traverseDummy();
     addIn();
-    valueNumbering();
 
     // this removes nodes so it needs to be last
     // TODO: Fix a weird bug where this is either removing
@@ -424,11 +439,10 @@ program:
     // remove nodes. see tests/if_if.p
     forwardDummies();
 
-    if (process.argv[3] == '--graph') {
-      printGraph();
-    } else {
-      // printInfo();
-    }
+    var opts = process.argv[3];
+    if (opts == '--graph') printGraph();
+    else if (opts == '--valnum') valueNumbering();
+    else printInfo();
   }
 ;
 
