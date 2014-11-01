@@ -1,10 +1,9 @@
 all: pascal.js
 
-pascal.js: pascal.y; jison pascal.y
+pascal.js: pascal.y; @./node node_modules/jison/lib/cli.js pascal.y
 
 # quickly make sure that the parser still works
 # might take a few seconds
-testparser:; jison pascal.y; ls tests/*.p | xargs -I{} node pascal.js ./{}
+testparser:; pascal.y; ls tests/*.p | xargs -I{} ./node pascal.js ./{}
 
 clean:; rm -f pascal.js
-
