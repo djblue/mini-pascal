@@ -1,6 +1,16 @@
 %{
+
+  var printDebug = false;
+
+  var debug = function (obj) {
+    if (printDebug) {
+      console.log(obj)
+    }
+  };
+
   var _ = require('underscore')
     , blocks = []
+    , flags = {}
     , id = 0
     , enter = null, exit = null
     , lastDummy = null
@@ -309,7 +319,9 @@
         var numberedBlock = [];
 
         // comment out to compare
-        console.log('block '+ JSON.stringify(block, null, 2));
+        if (!flags['--graph']) {
+          console.log('block '+ JSON.stringify(block, null, 2));
+        }
 
         // go through each expression in a block
         // and perform number value stuff on it
@@ -319,7 +331,6 @@
           var v2 = lookup(expr.c);
           var hash = findExpr(expr.op, v1, v2);
           var prev = findPrev(hash);
-
 
           // aa = 1 + 2
           // aa = bb + 1 where aa is a constant
@@ -352,8 +363,12 @@
           }
 
           // build the statement
-          var rhs = prev || (expr.b + ' ' + expr.op + ' ' + expr.c);
-          var statement = expr.a + ' = ' + rhs;
+          if(v[expr.a].const) { // handle constants
+            var statement = expr.a + ' = ' + v[expr.a].value;
+          } else {
+            var rhs = prev || (expr.b + ' ' + expr.op + ' ' + expr.c);
+            var statement = expr.a + ' = ' + rhs;
+          }
 
           // add the reduced statement to the block
           numberedBlock.push(statement);
@@ -361,7 +376,11 @@
 
         // console.log('v ' + JSON.stringify(v, null, 2));
         // console.log('h ' + JSON.stringify(h, null, 2));
-        console.log('reduced block '+ JSON.stringify(numberedBlock, null, 2));
+        if (!flags['--graph']) {
+          console.log('reduced block '+ JSON.stringify(numberedBlock, null, 2));
+        }
+
+        b.block = numberedBlock;
     };
 
     var valueNumbering = function() {
@@ -439,10 +458,26 @@ program:
     // remove nodes. see tests/if_if.p
     forwardDummies();
 
-    var opts = process.argv[3];
-    if (opts == '--graph') printGraph();
-    else if (opts == '--valnum') valueNumbering();
-    else printInfo();
+    // parse command line flags
+    process.argv.slice(3).forEach(function (flag) {
+      flags[flag] = true;
+    });
+
+    if (flags['--debug']) {
+      printDebug = true;
+    }
+
+    // which operations to perform
+    if (flags['--valnum']) { // perform value numbering
+      valueNumbering();
+    }
+  
+    // display the cfg in a particular way
+    if (flags['--graph']) {
+      printGraph();
+    } else {
+      printInfo();
+    }
   }
 ;
 
@@ -1040,5 +1075,6 @@ relop:
 
 identifier:
   IDENTIFIER {
+    $$ = $1.toLowerCase();
   }
 ;
