@@ -1,15 +1,44 @@
 # mini-pascal
 
 ## Get Going
+This repo comes with a node build for both mac and linux systems.
 
-To get going, make sure you have node.js installed. Then do:
+* If you are running on mac use `./node-mac-32` pascal.js <FILE>
+* If you are running on linux use `./node` pascal.js <FILE>
 
-    npm install -g jison
-    npm install
+This will print out the CFG, followed by the vars and the entry/exit points.
+For example, on mac try
+```
+./node-mac-32 pascal.js tests/if_else_assignment.p
+```
 
-to get the parser generator. Then run:
+Next to print out the CFG/vars with value numbering, use the option `--valnum`
+ex.
+```
+./node(or ./node-mac-32) pascal.js <FILE> --valnum
+```
 
-    make testparser
+Again for example, on mac try
+```
+./node-mac-32 pascal.js tests/if_else_assignment.p --valnum
+```
 
-to make sure the parser was built and is functioning correctly for you. now get
-to work!
+
+## Using a graph
+If you would like to create an actual graph of the CFG and you have homebrew installed,
+run
+```
+homebrew install graphviz
+./node pascal.js <FILE> --graph | dot -Tpng > graph.png
+open graph.png
+```
+
+## Options
+* --valnum - transforms by performing value numbering on the basic blocks
+* --graph - creates a graph, assuming graphviz is installed (see Using a graph)
+
+## Tests
+Various tests are located in the test directory. Feel free to use them.
+
+
+
