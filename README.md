@@ -14,9 +14,14 @@ For example, on mac try
 
 Next to print out the CFG/vars with value numbering, use the option `--valnum`
 ex.
-`./node(or ./node-mac-32) pascal.js <FILE> --valnum`
+```
+./node(or ./node-mac-32) pascal.js <FILE> --valnum
+```
+
 Again for example, on mac try
+```
 ./node-mac-32 pascal.js tests/if_else_assignment.p --valnum
+```
 
 
 ## Using a graph
@@ -30,7 +35,7 @@ open graph.png
 
 ## Options
 * --valnum - transforms by performing value numbering on the basic blocks
-* --graph` - creates a graph, assuming graphviz is installed (see Using a graph)
+* --graph - creates a graph, assuming graphviz is installed (see Using a graph)
 
 ## Tests
 Various tests are located in the test directory. Feel free to use them.
